@@ -1,0 +1,78 @@
+from webull import paper_webull
+import time
+
+# Webull Paper Trading Bot
+class SpyOptionsBot:
+    def __init__(self, email, password):
+        self.wb = paper_webull()  # Use paper trading
+        self.login(email, password)
+
+    def login(self, email, password):
+        print("[+] Logging in...")
+        self.wb.login(email, password)
+        print("[+] Logged in successfully.")
+
+    def get_spy_options(self, strike_offset=0, exp_date_index=0, call=True):
+        print("[+] Fetching SPY options chain...")
+        option_chain = self.wb.get_options('SPY')
+        
+        # Select expiration date
+        expiry_dates = option_chain['expirationDates']
+        exp_date = expiry_dates[exp_date_index]
+
+        print(f"[+] Using expiration date: {exp_date}")
+
+        # Get calls or puts for the given expiration date
+        contracts = self.wb.get_option_quote('SPY', exp_date)['call'] if call else self.wb.get_option_quote('SPY', exp_date)['put']
+        strikes = sorted(contracts.keys(), key=float)
+
+        selected_strike = strikes[len(strikes) // 2 + strike_offset]
+        selected_contract = contracts[selected_strike]
+
+        print(f"[+] Selected {'Call' if call else 'Put'} Strike: {selected_strike}")
+        return selected_contract['tickerId']
+
+    def place_order(self, ticker_id, action="BUY", qty=1, price_type="LIMIT", limit_price=0.10):
+        print(f"[+] Placing {action} order for {ticker_id}...")
+        order_id = self.wb.place_option_order(
+            ticker_id=ticker_id,
+            action=action,
+            orderType=price_type,
+            enforce="GTC",
+            qty=qty,
+            lmtPrice=limit_price
+        )
+        print(f"[+] Order placed: {order_id}")
+        return order_id
+
+    def close_positions(self):
+        print("[+] Checking open positions...")
+        positions = self.wb.get_positions()
+        
+        for pos in positions:
+            ticker_id = pos['ticker']['tickerId']
+            qty = pos['position']
+            price = pos['lastPrice']
+            
+            print(f"[+] Closing position: {ticker_id} at price {price}")
+            self.place_order(ticker_id, action="SELL", qty=qty, price_type="MARKET")
+
+    def run(self):
+        try:
+            ticker_id = self.get_spy_options(strike_offset=1, call=True)
+            self.place_order(ticker_id, qty=1, limit_price=0.10)
+
+            # Monitor and close after 5 minutes
+            time.sleep(300)
+            self.close_positions()
+
+        except Exception as e:
+            print("[-] Error:", e)
+
+# ======= Run the Bot =======
+if __name__ == "__main__":
+    EMAIL = "your_email@example.com"
+    PASSWORD = "your_password"
+
+    bot = SpyOptionsBot(EMAIL, PASSWORD)
+    bot.run()

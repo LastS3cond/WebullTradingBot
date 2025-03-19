@@ -1,0 +1,1 @@
+Small Webull bot to automate scalping on webull
