@@ -4,8 +4,10 @@ import os
 
 def main():
     load_dotenv()
-    wb = loginWebull(True)
+    wb = loginWebull()
     print(wb.get_portfolio())
+    wb.place_order(self, stock='SPY', tId=None, price=0, action='BUY', orderType='LMT', enforce='GTC', quant=0, outsideRegularTradingHour=True):
+    wb.place_order(stock='AAPL', price=90.0, qty=2)
 
 def loginWebull(paper = True):
     # Determine paper vs real trading
